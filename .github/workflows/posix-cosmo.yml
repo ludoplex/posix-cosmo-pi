@@ -1,0 +1,42 @@
+name: posix-cosmo
+
+# Builds the Cosmopolitan APE binaries and runs the offline module-contract
+# tests. APE/cosmocc builds belong on Linux CI, which is where cross-platform
+# verification for this tree actually happens.
+
+on:
+  push:
+    paths: ["posix/**", ".github/workflows/posix-cosmo.yml"]
+  pull_request:
+    paths: ["posix/**", ".github/workflows/posix-cosmo.yml"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cosmocc
+        run: |
+          mkdir -p "$HOME/cosmocc"
+          curl -fsSL https://cosmo.zip/pub/cosmocc/cosmocc.zip -o /tmp/cosmocc.zip
+          unzip -q /tmp/cosmocc.zip -d "$HOME/cosmocc"
+          echo "$HOME/cosmocc/bin" >> "$GITHUB_PATH"
+
+      - name: Build APE binaries
+        run: make -C posix
+
+      - name: Assimilate APE -> native ELF (robust execution on the runner)
+        run: |
+          for f in posix/bin/*.com; do "$HOME/cosmocc/bin/assimilate" "$f"; done
+          file posix/bin/*.com || true
+
+      - name: Run module-contract tests
+        run: make -C posix test
+
+      - name: Lint shell (shellcheck)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          # POSIX sh dialect; module `run` files have no extension.
+          find posix -type f \( -name '*.sh' -o -path '*/modules/*/run' \) \
+            -exec shellcheck -s sh {} +

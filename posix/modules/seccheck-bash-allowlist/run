@@ -1,0 +1,28 @@
+#!/bin/sh
+# seccheck-bash-allowlist — deny a denylist of destructive/exfiltrating shell.
+# Deterministic pattern match; extend the case list to tighten the policy.
+set -eu
+: "${PI_ROOT:?PI_ROOT must be set}"
+. "$PI_ROOT/core/lib.sh"
+
+env="$(cat)"
+tool="$(printf '%s' "$env" | jget tool 2>/dev/null || true)"
+[ "$tool" = bash ] || { printf '%s' "$env"; exit 0; }
+
+cmd="$(printf '%s' "$env" | jget args.command 2>/dev/null || true)"
+
+case "$cmd" in
+    *"rm -rf /"*|*"rm -fr /"*|*"rm -rf ~"*)
+        deny "recursive delete of a root/home path" ;;
+    *":(){"*|*":(){ :|:"*)
+        deny "fork bomb" ;;
+    *"mkfs"*|*"dd if="*"of=/dev/"*|*"> /dev/sd"*|*"> /dev/nvme"*)
+        deny "raw device write" ;;
+    *"curl "*"| sh"*|*"curl "*"|sh"*|*"wget "*"| sh"*|*"wget "*"|sh"*)
+        deny "pipe-to-shell of remote content" ;;
+    *"chmod -R 777 /"*|*"chown -R "*" /"*)
+        deny "recursive permission/ownership change on root" ;;
+esac
+
+printf '%s' "$env"
+exit 0

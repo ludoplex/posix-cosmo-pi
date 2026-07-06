@@ -1,0 +1,29 @@
+#!/bin/sh
+# sanitize-control-strip — remove ANSI escape sequences and stray control bytes
+# from tool output so it cannot inject terminal control codes into the context.
+# Transform module: re-emits the envelope with a cleaned `text` field.
+set -eu
+: "${PI_ROOT:?PI_ROOT must be set}"
+. "$PI_ROOT/core/lib.sh"
+
+env="$(cat)"
+text="$(printf '%s' "$env" | jget text 2>/dev/null || true)"
+
+esc="$(printf '\033')"
+# 1) strip whole CSI sequences (ESC [ params final-letter); 2) delete residual
+#    control bytes except tab (011), newline (012), CR (015). ESC (033) is inside
+#    the 016-037 range, so any stray escape is removed too.
+clean="$(printf '%s' "$text" \
+    | sed "s/${esc}\[[0-9;?]*[A-Za-z]//g" \
+    | tr -d '\000-\010\013\014\016-\037')"
+
+hook="$(printf '%s' "$env" | jget hook 2>/dev/null || echo post_tool)"
+kind="$(printf '%s' "$env" | jget kind 2>/dev/null || echo tool_result)"
+tool="$(printf '%s' "$env" | jget tool 2>/dev/null || true)"
+
+printf '{"hook":%s,"kind":%s,"tool":%s,"text":%s}' \
+    "$(printf '%s' "$hook" | jstr)" \
+    "$(printf '%s' "$kind" | jstr)" \
+    "$(printf '%s' "$tool" | jstr)" \
+    "$(printf '%s' "$clean" | jstr)"
+exit 0
