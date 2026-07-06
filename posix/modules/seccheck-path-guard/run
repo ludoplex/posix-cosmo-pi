@@ -1,0 +1,23 @@
+#!/bin/sh
+# seccheck-path-guard — deterministic boundary check on file-tool paths.
+set -eu
+: "${PI_ROOT:?PI_ROOT must be set}"
+. "$PI_ROOT/core/lib.sh"
+
+env="$(cat)"
+tool="$(printf '%s' "$env" | jget tool 2>/dev/null || true)"
+case "$tool" in
+    read|write|ls|edit) : ;;
+    *) printf '%s' "$env"; exit 0 ;;   # not a file tool — pass through
+esac
+
+path="$(printf '%s' "$env" | jget args.path 2>/dev/null || true)"
+[ -n "$path" ] || { printf '%s' "$env"; exit 0; }
+
+case "$path" in
+    /*)   deny "absolute path not allowed: $path" ;;
+    *..*) deny "parent-directory traversal blocked: $path" ;;
+esac
+
+printf '%s' "$env"
+exit 0

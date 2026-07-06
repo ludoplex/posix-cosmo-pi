@@ -1,0 +1,17 @@
+#!/bin/sh
+# filter-secret-redact — redact credential-shaped tokens from content.
+# Operates on the raw bytes of stdin, so it works uniformly on the messages array
+# (pre_request) and on the tool envelope (post_tool): the replacements are plain
+# text, so the surrounding JSON stays well-formed.
+set -eu
+: "${PI_ROOT:?PI_ROOT must be set}"
+. "$PI_ROOT/core/lib.sh"
+
+sed -E \
+    -e 's/sk-ant-[A-Za-z0-9_-]{20,}/[REDACTED_ANTHROPIC_KEY]/g' \
+    -e 's/AKIA[0-9A-Z]{16}/[REDACTED_AWS_KEY]/g' \
+    -e 's/gh[pousr]_[A-Za-z0-9]{20,}/[REDACTED_GITHUB_TOKEN]/g' \
+    -e 's/xox[baprs]-[A-Za-z0-9-]{10,}/[REDACTED_SLACK_TOKEN]/g' \
+    -e 's/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/[REDACTED_JWT]/g' \
+    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----/[REDACTED_PRIVATE_KEY]/g'
+exit 0

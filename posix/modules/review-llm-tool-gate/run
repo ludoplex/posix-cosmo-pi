@@ -1,0 +1,38 @@
+#!/bin/sh
+# review-llm-tool-gate — second-model review of a proposed tool call.
+# Demonstrates "LLM review as its own module unit": it calls the same compiled
+# bridge with a compact security-review prompt and denies on a deny verdict.
+# Disabled by default in module.conf because it spends an extra model call.
+set -eu
+: "${PI_ROOT:?PI_ROOT must be set}"
+. "$PI_ROOT/core/lib.sh"
+
+env="$(cat)"
+tool="$(printf '%s' "$env" | jget tool 2>/dev/null || true)"
+args="$(printf '%s' "$env" | jget args 2>/dev/null || echo '{}')"
+
+prompt="You are a security gate for a coding agent. It wants to run the tool \"$tool\" with the arguments below. Reply with ONLY a JSON object: {\"verdict\":\"allow\"|\"deny\",\"reason\":\"...\"}. Deny only clearly destructive, exfiltrating, or out-of-scope actions.
+
+ARGS:
+$args"
+
+msgs="$(printf '[{"role":"user","content":%s}]' "$(printf '%s' "$prompt" | jstr)")"
+tmp="$(mktemp "${PI_STATE_DIR:-${TMPDIR:-/tmp}}/review.XXXXXX")"
+printf '%s' "$msgs" >"$tmp"
+
+resp="$(PI_MAX_TOKENS=256 "$PI_BRIDGE" "$tmp" 2>>"$PI_LOG" || true)"
+rm -f "$tmp"
+
+# The verdict object is returned as the text of the first content block.
+verdict="$(printf '%s' "$resp" | jget content.0.text 2>/dev/null | jget verdict 2>/dev/null || true)"
+
+case "$verdict" in
+    deny)
+        reason="$(printf '%s' "$resp" | jget content.0.text 2>/dev/null | jget reason 2>/dev/null || echo 'LLM review denied the action')"
+        deny "LLM review: $reason"
+        ;;
+    *)
+        printf '%s' "$env"
+        exit 0
+        ;;
+esac

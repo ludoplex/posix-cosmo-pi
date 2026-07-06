@@ -1,0 +1,4 @@
+# Built Cosmopolitan APE artifacts — produced by `make`, never committed.
+/bin/*.com
+/bin/*.com.dbg
+/bin/*.aarch64.elf
