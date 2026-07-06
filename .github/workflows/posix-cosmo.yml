@@ -24,12 +24,9 @@ jobs:
           echo "$HOME/cosmocc/bin" >> "$GITHUB_PATH"
 
       - name: Build APE binaries
-        run: make -C posix
-
-      - name: Assimilate APE -> native ELF (robust execution on the runner)
         run: |
-          for f in posix/bin/*.com; do "$HOME/cosmocc/bin/assimilate" "$f"; done
-          file posix/bin/*.com || true
+          make -C posix
+          file posix/bin/*.com || true   # cosmocc emits natively-runnable ELF on Linux
 
       - name: Run module-contract tests
         run: make -C posix test
