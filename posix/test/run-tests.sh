@@ -3,7 +3,7 @@
 # No network: the LLM-review module is disabled by default, so nothing calls the
 # bridge. Requires bin/jsonx.com (built by `make`).
 set -eu
-PI_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+PI_ROOT="$(unset CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)"
 export PI_ROOT
 export PI_JSONX="$PI_ROOT/bin/jsonx.com"
 export PI_LOG=/dev/null

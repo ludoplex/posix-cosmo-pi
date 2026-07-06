@@ -14,7 +14,7 @@ cmd="$(printf '%s' "$env" | jget args.command 2>/dev/null || true)"
 case "$cmd" in
     *"rm -rf /"*|*"rm -fr /"*|*"rm -rf ~"*)
         deny "recursive delete of a root/home path" ;;
-    *":(){"*|*":(){ :|:"*)
+    *":(){"*)
         deny "fork bomb" ;;
     *"mkfs"*|*"dd if="*"of=/dev/"*|*"> /dev/sd"*|*"> /dev/nvme"*)
         deny "raw device write" ;;

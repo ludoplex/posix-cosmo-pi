@@ -35,5 +35,8 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
           # POSIX sh dialect; module `run` files have no extension.
+          # Excluded, by design: SC1090/SC1091 (lib.sh is sourced via a dynamic
+          # $PI_ROOT root — the plugin model), SC2016 (the test harness defers
+          # expansion to inner `sh -c` on purpose). Real bug classes stay on.
           find posix -type f \( -name '*.sh' -o -path '*/modules/*/run' \) \
-            -exec shellcheck -s sh {} +
+            -exec shellcheck -s sh -e SC1090,SC1091,SC2016 {} +

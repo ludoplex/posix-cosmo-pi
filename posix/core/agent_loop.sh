@@ -10,7 +10,7 @@
 # results back. All security/filter/sanitize/review logic lives in the modules —
 # this loop only wires the hooks.
 set -eu
-PI_ROOT="${PI_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}"
+PI_ROOT="${PI_ROOT:-$(unset CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)}"
 export PI_ROOT
 . "$PI_ROOT/core/lib.sh"
 
